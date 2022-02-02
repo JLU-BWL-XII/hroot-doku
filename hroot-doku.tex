@@ -9,7 +9,7 @@
 \usepackage{xcolor}
 
 \usepackage{parskip}
-\setlength{\parskip}{0pt} % 1ex plus 0.5ex minus 0.2ex}
+\setlength{\parskip}{1pt} % 1ex plus 0.5ex minus 0.2ex}
 \setlength{\parindent}{0pt}
 
 % see https://www.overleaf.com/learn/latex/Code_listing
@@ -47,12 +47,20 @@
 \maketitle
 
 \section{Software install log}
-Added software (name, date):
+Added software packages (name, date):
 \begin{itemize}
-    \item tmux, 2.2.22
-    \item nginx, 2.2.22
     \item certbot, 2.2.22
+    \item tmux, 2.2.22
+    \item mariadb-server, 2.2.22
+    \item mariadb-client, 2.2.22
+    \item libmariadb-deb, 2.2.22
+    \item nginx, 2.2.22
     \item python3-certbot-nginx, 2.2.22
+\end{itemize}
+
+Manually installed (package, source, date):
+\begin{itemize}
+    \item rvm, \url{http://rvm.io/}, 2.2.22
 \end{itemize}
 
 \section{docker}
@@ -69,6 +77,35 @@ sudo docker run -d --restart no haproxy
 
 \begin{lstlisting}
 sudo systemctl disable docker
+\end{lstlisting}
+
+\subsection{Old hroot Dockerfile}
+\begin{lstlisting}
+FROM phusion/passenger-full:2.1.0
+
+ENV HOME /root
+
+RUN lsb_release -a
+
+RUN rm -f /etc/service/nginx/down
+ADD ./webapp.conf /etc/nginx/sites-enabled/webapp.conf
+ADD ./hroot /home/app/hroot
+
+RUN apt update && apt -y upgrade && apt install shared-mime-info
+
+RUN bash -lc 'rvm install ruby-2.5.3'
+RUN bash -lc 'rvm --default use ruby-2.5.3'
+RUN bash -lc '/usr/bin/gem install bundler'
+RUN bash -lc '(cd /home/app/hroot/; /usr/bin/bundle update mimemagic)'
+RUN bash -lc '(cd /home/app/hroot/; /usr/bin/bundle install)'
+RUN bash -lc '(cd /home/app/hroot/; /usr/bin/bundle exec rails assets:precompile)'
+
+RUN bash -lc 'cp /usr/bin/ruby /usr/bin/ruby2.5.3'
+RUN bash -lc 'chmod -R 0777 /home/app/hroot/'
+
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+CMD ["/home/app/hroot/first_startup.sh"]
 \end{lstlisting}
 
 \section{System update to bullseye}
@@ -132,12 +169,15 @@ Config \verb|/etc/nginx/sites-available/default|
         #
         # include snippets/snakeoil.conf;
 
-        root /var/www/html;
+        #root /var/www/html;
+        root /home/tux/hroot/public;
+
+        passenger_enabled on;
+        passenger_app_env production;
 
         # Add index.php to the list if you are using PHP
         index index.html index.htm index.nginx-debian.html;
     server_name experimente.wirtschaft.uni-giessen.de; # managed by Certbot
-
 
         location / {
                 # First attempt to serve request as file, then
@@ -203,6 +243,171 @@ Added crontab entry via \verb|sudo crontab -e| for renewal:
 0 5 * * * /usr/bin/certbot renew --quiet
 \end{lstlisting}
 
-\section{hroot installation}
+\section{hroot}
+Source: \url{https://github.com/wiso-forschungslabor/hroot}
+
+Documentation: \url{https://github.com/wiso-forschungslabor/hroot-documentation/wiki/}
+
+\subsection{rails install}
+\begin{lstlisting}
+sudo gpg --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+curl -sSL https://get.rvm.io | sudo bash -s stable
+sudo usermod -a -G rvm tux
+source /etc/profile.d/rvm.sh
+rvm info
+rvm install 2.5.3
+rvm gemset create hroot
+rvm use 2.5.3@hroot
+ruby --version
+\end{lstlisting}
+
+\subsection{Mariadb install}
+\begin{lstlisting}
+sudo apt-get install mysql-server mysql-client libmariadb-dev
+sudo mysql_secure_installation
+\end{lstlisting}
+
+Note: Root PW was changed to something else than system login!
+
+After secure installation log into mysql via \verb|mysql -u root -p| and create databases and hroot user:
+\begin{lstlisting}
+CREATE DATABASE hroot_development;
+CREATE DATABASE hroot_test;
+CREATE DATABASE hroot_production;
+CREATE USER 'hroot'@'localhost' IDENTIFIED BY 'password';
+GRANT ALL ON hroot_development.* TO 'hroot'@'localhost'; 
+GRANT ALL ON hroot_test.* TO 'hroot'@'localhost'; 
+GRANT ALL ON hroot_production.* TO 'hroot'@'localhost';
+FLUSH PRIVILEGES;
+\end{lstlisting}
+
+Deleted plain password in \verb|~/.mysql_history| afterwards.
+
+For further docs see \url{https://dev.mysql.com/doc/refman/8.0/en/grant.html}
+
+\subsection{hroot install}
+Forked hroot to github account.
+To clone the git repo an access token is needed.
+Create one github settings $\rightarrow$ Developer Settings $\rightarrow$ Personal access tokens
+\begin{lstlisting}
+cd /home/tux
+git clone https://github.com/JLU-BWL-XII/hroot.git
+\end{lstlisting}
+
+\begin{lstlisting}
+gem install bundler
+\end{lstlisting}
+
+Fix mimemagic issue by editing the Gemfile, add:
+\begin{lstlisting}
+    gem 'mimemagic', github: 'mimemagicrb/mimemagic', ref: '01f92d86d15d85cfd0f20dabd025dcbd36a8a60f'
+\end{lstlisting}
+Now change bundle to use HTTPS:
+\begin{lstlisting}
+bundle config hithub.https true
+\end{lstlisting}
+
+See \url{https://stackoverflow.com/questions/66919504/your-bundle-is-locked-to-mimemagic-0-3-5-but-that-version-could-not-be-found}
+
+Install gems:
+\begin{lstlisting}
+bundle install
+\end{lstlisting}
+
+Create databse config \verb|config/database.yml|:
+\begin{lstlisting}
+    development:
+    adapter: mysql2
+    encoding: utf8
+    reconnect: false
+    database: hroot_development
+    pool: 5
+    username: hroot
+    password: insert_your_database_password_here
+    host: localhost
+  
+  # Warning: The database defined as "test" will be erased and
+  # re-generated from your development database when you run "rake".
+  # Do not set this db to the same as development or production.
+  test:
+    adapter: mysql2
+    encoding: utf8
+    reconnect: false
+    database: hroot_test
+    pool: 5
+    username: hroot
+    password: insert_your_database_password_here
+    host: localhost
+  
+  production:
+    adapter: mysql2
+    encoding: utf8
+    reconnect: false
+    database: hroot_production
+    pool: 5
+    username: hroot
+    password: insert_your_database_password_here
+    host: localhost
+\end{lstlisting}
+
+Create \verb|secret_key_base| via \verb|EDITOR=vim rails credentials:edit|
+
+Create tables and admin user:
+\begin{lstlisting}
+rails db:migrate
+rails hroot:create_admin
+RAILS_ENV=production rails db:migrate
+RAILS_ENV=production rails hroot:create_admin
+\end{lstlisting}
+
+Create \verb|config/secrets.yml| and generate two keys via \verb|rails secret|.
+
+Run local server and tests:
+\begin{lstlisting}
+rails serverrails db:test:prepare
+rails test
+\end{lstlisting}
+
+Application configs are in \verb|config/environments| (one per environment).
+
+\subsection{Passenger}
+Documentation: \url{https://www.phusionpassenger.com/docs/tutorials/deploy_to_production/installations/oss/ownserver/ruby/nginx/}
+
+\begin{lstlisting}
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 561F9B9CAC40B2F7
+sudo sh -c 'echo deb https://oss-binaries.phusionpassenger.com/apt/passenger bullseye main > /etc/apt/sources.list.d/passenger.list'
+sudo apt-get update
+if [ ! -f /etc/nginx/modules-enabled/50-mod-http-passenger.conf ]; then sudo ln -s /usr/share/nginx/modules-available/mod-http-passenger.load /etc/nginx/modules-enabled/50-mod-http-passenger.conf ; fi
+sudo ls /etc/nginx/conf.d/mod-http-passenger.conf
+sudo service nginx restart
+sudo /usr/bin/passenger-config validate-install
+sudo /usr/sbin/passenger-memory-stats
+\end{lstlisting}
+
+Precomile production assets:
+\begin{lstlisting}
+RAILS_ENV=production rails assets:precompile
+\end{lstlisting}
+
+Generate periodic tasks via \verb|whenever| and add them to \verb|crontab -e|:
+\begin{lstlisting}
+0,5,10,15,20,25,30,35,40,45,50,55 * * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''Task.run_tasks'\'''
+
+0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''LoginCode.cleanup'\'''
+
+0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''Task.send_warnings'\'''
+
+0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''OneYearReminders.send_one_year_warnings1'\'''
+
+0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''OneYearReminders.send_one_year_warnings2'\'''
+
+0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''OneYearReminders.disable_after_one_year'\'''
+
+## [message] Above is your schedule file converted to cron syntax; your crontab file was not updated.
+## [message] Run `whenever --help' for more options.
+\end{lstlisting}
+
+\subsection{Logo}
+Replaced JLU logo at \verb|app/assets/images/mainlogo.png|
 
 \end{document}
