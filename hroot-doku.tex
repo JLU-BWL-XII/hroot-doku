@@ -39,23 +39,70 @@
 \lstset{style=mystyle}
 
 \title{hroot documentation}
-\author{Tobias Weiss}
 \date{\today}
 
 \begin{document}
 
+\tableofcontents
+
 \maketitle
+
+\section{Contacts}
+Main admin and responsible for the Server is Tobias Weiss.
+
+Further server related contacts:
+\begin{itemize}
+    \item Herr Weller (HRZ - hat server im Vault): 0170 / 9107300
+    \item Herr Mark Lang (Backup): 0641 / 99-13145
+    \item Frau Tanja Zopf (HRZ Netzgruppe Hotline): 0641 99 13100
+\end{itemize}
+
+\section{Initial setup}
+Inital setup took place on 30/04/2021. 
+
+The Ticket ID for the IP-Form was 27051.
+
+\begin{lstlisting}
+Hostname:         experimente
+Domainname:       wirtschaft.uni-giessen.de
+
+IP-Adresse:       134.176.7.57
+Subnetzmaske:     255.255.255.0
+Standardgateway:  134.176.7.1
+
+Ethernetadresse:
+DNS-Server:       134.176.2.5
+DNS-Server:       134.176.2.7
+
+Verwaltungsdaten:
+Standort:         Heinrich-Buff-Ring 44
+Raum:             SR 2
+Hardware-Typ:     VIRTUAL-SERVER
+Software-Typ:     LINUX-UBUNTU
+\end{lstlisting}
+
+\section{Access}
+Access is granted to all chair members. Be aware of the chain of trust. Please consulat the main in case of doubt.
+
+You can use the IP \verb|134.176.7.57:22| to connect via SSH.
+
+A \verb|~/.sshconfig| example:
+\begin{lstlisting}
+~/.sshconfig
+Host experimente.wirtschaft.uni-giessen.de                                        
+        User tux
+\end{lstlisting}
 
 \section{Software install log}
 Added software packages (name, date):
 \begin{itemize}
     \item certbot, 2.2.22
-    \item tmux, 2.2.22
-    \item mariadb-server, 2.2.22
-    \item mariadb-client, 2.2.22
     \item libmariadb-deb, 2.2.22
+    \item mariadb-client, 2.2.22
+    \item mariadb-server, 2.2.22
     \item nginx, 2.2.22
     \item python3-certbot-nginx, 2.2.22
+    \item tmux, 2.2.22
 \end{itemize}
 
 Manually installed (package, source, date):
@@ -243,6 +290,16 @@ Added crontab entry via \verb|sudo crontab -e| for renewal:
 0 5 * * * /usr/bin/certbot renew --quiet
 \end{lstlisting}
 
+\section{postfix}
+Change \verb|/etc/postfix/canonical| for mail redirection.
+Do not forget to update the map after editing via \verb|sudo postmap /etc/postfix/canonical|.
+\begin{lstlisting}
+#root    linux-admins@hrz.uni-giessen.de
+root    tobias.weiss@wirtschaft.uni-giessen.de
+tux    tobias.weiss@wirtschaft.uni-giessen.de
+\end{lstlisting}
+
+
 \section{hroot}
 Source: \url{https://github.com/wiso-forschungslabor/hroot}
 
@@ -409,5 +466,58 @@ Generate periodic tasks via \verb|whenever| and add them to \verb|crontab -e|:
 
 \subsection{Logo}
 Replaced JLU logo at \verb|app/assets/images/mainlogo.png|
+
+\section{Monitoring}
+\subsection{Webserver monitoring}
+Web server is externally monitored via a private vServer by means a simple ping script.
+Ask Tobias Weiss for details.
+
+\subsection{Disk and memory monitoring}
+The simple \verb|home/tux/monitoring/disk-monitor.py| and \verb|memory-monitor.py| scripts are used.
+Note that the config resides in \verb|conf.py|.
+They are scheduled via \verb|/etc/crontab|:
+\begin{lstlisting}
+42 * * * * root free -m | python2.7 /home/tux/monitoring/memory-monitor.py
+42 * * * * root df -h | python2.7 /home/tux/monitoring/disk-monitor.py
+\end{lstlisting}
+
+\section{Backup}
+\subsection{System Backup}
+Herr Lang creates a daily backup.
+
+Storage policy?
+
+\subsection{MySQL Backup}
+Daily database backup is scheduled via \verb|sudo crontab -e|:
+\begin{lstlisting}                                                
+41 5 * * * /usr/local/sbin/hroot-db-backup.sh 
+\end{lstlisting}
+The script is located at \verb|/usr/sbin/hroot-db-backup.sh|. Only root can read and execute.
+\begin{lstlisting}
+#!/bin/bash
+# backup script for the hroot production database
+# scheduled via
+# sudo crontab -e
+
+DB=hroot_production
+PATH=/home/tux/backup
+USER=hroot
+PASS=hrootDatabasePW
+DATE=`/usr/bin/date +%Y-%m-%d`
+
+echo "$DB database backup $DATE" 
+/usr/bin/mysqldump -u $USER -p$PASS $DB > $PATH/$DB-$DATE.sql
+echo "exit staus: $?" 
+
+echo "deleting backups older than 30 days"
+/usr/bin/find /home/tux/backup -name "*.sql" -type f -mtime +30 
+echo "exit staus: $?" 
+
+echo "folder content:"
+/usr/bin/ls -lah $PATH
+
+echo "folder size:"
+/usr/bin/du -sh $PATH
+\end{lstlisting}
 
 \end{document}
