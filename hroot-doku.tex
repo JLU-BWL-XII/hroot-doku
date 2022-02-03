@@ -474,6 +474,7 @@ Ask Tobias Weiss for details.
 
 \subsection{Disk and memory monitoring}
 The simple \verb|home/tux/monitoring/disk-monitor.py| and \verb|memory-monitor.py| scripts are used.
+They alarm if disk is filled by more than 80\% or RAM less free than 200 MB.
 Note that the config resides in \verb|conf.py|.
 They are scheduled via \verb|/etc/crontab|:
 \begin{lstlisting}
@@ -483,15 +484,17 @@ They are scheduled via \verb|/etc/crontab|:
 
 \section{Backup}
 \subsection{System Backup}
+Storage policy:daily full, ?
 Herr Lang creates a daily backup.
 
-Storage policy?
 
 \subsection{MySQL Backup}
+Storage policy: daily full, 30 days
 Daily database backup is scheduled via \verb|sudo crontab -e|:
-\begin{lstlisting}                                                
-41 5 * * * /usr/local/sbin/hroot-db-backup.sh 
+\begin{lstlisting}   
+24 3 * * * /usr/local/sbin/hroot-db-backup.sh 
 \end{lstlisting}
+
 The script is located at \verb|/usr/sbin/hroot-db-backup.sh|. Only root can read and execute.
 \begin{lstlisting}
 #!/bin/bash
@@ -510,7 +513,7 @@ echo "$DB database backup $DATE"
 echo "exit staus: $?" 
 
 echo "deleting backups older than 30 days"
-/usr/bin/find /home/tux/backup -name "*.sql" -type f -mtime +30 
+/usr/bin/find /home/tux/backup -name "*.sql" -type f -mtime +30 -delete
 echo "exit staus: $?" 
 
 echo "folder content:"
