@@ -421,7 +421,8 @@ Create \verb|config/secrets.yml| and generate two keys via \verb|rails secret|.
 
 Run local server and tests:
 \begin{lstlisting}
-rails serverrails db:test:prepare
+rails server
+rails db:test:prepare
 rails test
 \end{lstlisting}
 
@@ -446,30 +447,28 @@ Precomile production assets:
 RAILS_ENV=production rails assets:precompile
 \end{lstlisting}
 
+\subsection{hroot conjobs}
 Generate periodic tasks via \verb|whenever| and add them to \verb|crontab -e|:
 \begin{lstlisting}
-0,5,10,15,20,25,30,35,40,45,50,55 * * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''Task.run_tasks'\'''
+0,5,10,15,20,25,30,35,40,45,50,55 * * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''Task.run_tasks'\''' > /dev/null 2>&1
 
-0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''LoginCode.cleanup'\'''
+0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''LoginCode.cleanup'\''' > /dev/null 2>&1
 
-0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''Task.send_warnings'\'''
+0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''Task.send_warnings'\''' > /dev/null 2>&1
 
-0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''OneYearReminders.send_one_year_warnings1'\'''
+0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''OneYearReminders.send_one_year_warnings1'\''' > /dev/null 2>&1
 
-0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''OneYearReminders.send_one_year_warnings2'\'''
+0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''OneYearReminders.send_one_year_warnings2'\''' > /dev/null 2>&1
 
-0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''OneYearReminders.disable_after_one_year'\'''
-
-## [message] Above is your schedule file converted to cron syntax; your crontab file was not updated.
-## [message] Run `whenever --help' for more options.
+0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''OneYearReminders.disable_after_one_year'\''' > /dev/null 2>&1
 \end{lstlisting}
 
 \subsection{Logo}
 Replaced JLU logo at \verb|app/assets/images/mainlogo.png|
 
 \section{Monitoring}
-\subsection{Webserver monitoring}
-Web server is externally monitored via a private vServer by means a simple ping script.
+\subsection{Web server monitoring}
+Web server is externally monitored via a private host (tobias-weiss.org) by means a simple ping script.
 Ask Tobias Weiss for details.
 
 \subsection{Disk and memory monitoring}
@@ -484,12 +483,16 @@ They are scheduled via \verb|/etc/crontab|:
 
 \section{Backup}
 \subsection{System Backup}
-Storage policy:daily full, ?
+Storage policy:daily full, keep policy unknown!
 Herr Lang creates a daily backup.
 
-
 \subsection{MySQL Backup}
+Stored in \verb|/home/tux/backup|
+
+Changed access rights to folder via \verb|chmod o-rx \verb|/home/tux/backup/|
+
 Storage policy: daily full, 30 days
+
 Daily database backup is scheduled via \verb|sudo crontab -e|:
 \begin{lstlisting}   
 24 3 * * * /usr/local/sbin/hroot-db-backup.sh 
@@ -510,11 +513,15 @@ DATE=`/usr/bin/date +%Y-%m-%d`
 
 echo "$DB database backup $DATE" 
 /usr/bin/mysqldump -u $USER -p$PASS $DB > $PATH/$DB-$DATE.sql
-echo "exit staus: $?" 
+echo "exit status: $?" 
+
+echo "Change access rights"
+/usr/bin/chmod o-rwx $PATH/*
+echo "exit status: $?"
 
 echo "deleting backups older than 30 days"
 /usr/bin/find /home/tux/backup -name "*.sql" -type f -mtime +30 -delete
-echo "exit staus: $?" 
+echo "exit status: $?" 
 
 echo "folder content:"
 /usr/bin/ls -lah $PATH
