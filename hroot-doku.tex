@@ -296,7 +296,7 @@ Added crontab entry via \verb|sudo crontab -e| for renewal:
 0 5 * * * /usr/bin/certbot renew --quiet
 \end{lstlisting}
 
-\section{postfix}
+\section{Postfix}
 Change \verb|/etc/postfix/canonical| for mail redirection.
 Do not forget to update the map after editing via \verb|sudo postmap /etc/postfix/canonical|.
 \begin{lstlisting}
@@ -332,7 +332,8 @@ sudo mysql_secure_installation
 
 Note: Root PW was changed to something else than system login!
 
-After secure installation log into mysql via \verb|mysql -u root -p| and create databases and hroot user:
+After secure installation log into mysql via \verb|mysql -u root -p|.
+Create databases and hroot user:
 \begin{lstlisting}
 CREATE DATABASE hroot_development;
 CREATE DATABASE hroot_test;
@@ -349,9 +350,9 @@ Deleted plain password in \verb|~/.mysql_history| afterwards.
 For further docs see \url{https://dev.mysql.com/doc/refman/8.0/en/grant.html}
 
 \subsection{hroot install}
-Forked hroot to github account.
+Forked hroot to GitHub account.
 To clone the git repo an access token is needed.
-Create one github settings $\rightarrow$ Developer Settings $\rightarrow$ Personal access tokens
+Create one GitHub settings $\rightarrow$ Developer Settings $\rightarrow$ Personal access tokens
 \begin{lstlisting}
 cd /home/tux
 git clone https://github.com/JLU-BWL-XII/hroot.git
@@ -361,7 +362,7 @@ git clone https://github.com/JLU-BWL-XII/hroot.git
 gem install bundler
 \end{lstlisting}
 
-Fix mimemagic issue by editing the Gemfile, add:
+Fix \verb|mimemagic| issue by editing the Gem file, add:
 \begin{lstlisting}
     gem 'mimemagic', github: 'mimemagicrb/mimemagic', ref: '01f92d86d15d85cfd0f20dabd025dcbd36a8a60f'
 \end{lstlisting}
@@ -448,12 +449,12 @@ sudo /usr/bin/passenger-config validate-install
 sudo /usr/sbin/passenger-memory-stats
 \end{lstlisting}
 
-Precomile production assets:
+Precompile production assets:
 \begin{lstlisting}
 RAILS_ENV=production rails assets:precompile
 \end{lstlisting}
 
-\subsection{hroot conjobs}
+\subsection{hroot cronjobs}
 Generate periodic tasks via \verb|whenever| and add them to \verb|crontab -e|:
 \begin{lstlisting}
 0,5,10,15,20,25,30,35,40,45,50,55 * * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''Task.run_tasks'\''' > /dev/null 2>&1

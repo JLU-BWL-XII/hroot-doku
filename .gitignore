@@ -26,3 +26,4 @@
 *.fdb_latexmk
 *.xdv
 *.rubbercache
+.vscode/*
