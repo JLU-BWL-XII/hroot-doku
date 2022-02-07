@@ -52,13 +52,19 @@ Main admin and responsible for the Server is Tobias Weiss.
 
 Further server related contacts:
 \begin{itemize}
-    \item Herr Weller (HRZ - hat server im Vault): 0170 / 9107300
-    \item Herr Mark Lang (Backup): 0641 / 99-13145
-    \item Frau Tanja Zopf (HRZ Netzgruppe Hotline): 0641 99 13100
+    \item HRZ Hotline: 0641 99 13100
+    \item Herr Marc Lang, Marc.Lang@hrz.uni-giessen.de (HRZ VMware responsible, Backup): 0641 / 99-13145
+    \item Herr Hartmut Weller, hartmut.weller@hrz.uni-giessen.de (HRZ): 0170 / 9107300
+\end{itemize}
+
+\section{Users}
+\begin{itemize}
+    \item penguin - HRZ admin user
+    \item tux - our
 \end{itemize}
 
 \section{Initial setup}
-Inital setup took place on 30/04/2021. 
+Inital setup took place on 30/04/2021.
 
 The Ticket ID for the IP-Form was 27051.
 
@@ -275,7 +281,7 @@ Restart via \verb|sudo nginx -t && sudo nginx -s reload|
 
 \section{certbot}
 Documentation: \\
-\url{https://www.nginx.com/blog/using-free-ssltls-certificates-from-lets-encrypt-with-nginx/} 
+\url{https://www.nginx.com/blog/using-free-ssltls-certificates-from-lets-encrypt-with-nginx/}
 
 Be aware the Debian package for nginx is called \verb|python3-certbot-nginx| (3 is missing in the guide)
 
@@ -483,8 +489,8 @@ They are scheduled via \verb|/etc/crontab|:
 
 \section{Backup}
 \subsection{System Backup}
-Storage policy:daily full, keep policy unknown!
-Herr Lang creates a daily backup.
+Storage policy:daily full (at 20:16), kept 60 days on disk and one year on tape.
+Herr Marc Lang creates a daily backup.
 
 \subsection{MySQL Backup}
 Stored in \verb|/home/tux/backup|
