@@ -473,6 +473,20 @@ Generate periodic tasks via \verb|whenever| and add them to \verb|crontab -e|:
 \subsection{Logo}
 Replaced JLU logo at \verb|app/assets/images/mainlogo.png|
 
+Precompile production assets:
+\begin{lstlisting}
+RAILS_ENV=production rails assets:precompile
+\end{lstlisting}
+
+
+\subsection{Directions image}
+Placed image at \verb|app/assets/images/directions.png|
+
+Precompile production assets:
+\begin{lstlisting}
+RAILS_ENV=production rails assets:precompile
+\end{lstlisting}
+
 \section{Monitoring}
 \subsection{Web server monitoring}
 Web server is externally monitored via a private host (tobias-weiss.org) by means a simple ping script.
