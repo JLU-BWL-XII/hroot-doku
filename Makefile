@@ -10,7 +10,7 @@ all:  ## Compile paper
 
 install:
 	@echo Copy files to network share
-	@cp ./*.pdf /home/weiss/mnt/FB02-Pfeiffer-Team1/09_DecIS_Lab/hroot/
+	@cp ./*.pdf /home/weiss/mnt/FB02-Pfeiffer-Team1/50_DecIS_Lab/hroot/
 
 clean:  ## Clean output files
 	rubber --clean $(PAPER)

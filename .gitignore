@@ -27,3 +27,4 @@
 *.xdv
 *.rubbercache
 .vscode/*
+__latexindext_temp.tex
