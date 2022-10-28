@@ -649,8 +649,10 @@ echo "folder size:"
     \item install php: \verb|sudo apt install php7.4 php7.4-mbstring php7.4-mysql php7.4-gd php7.4-zip php7.4-fpm php7.4-json php7.4-xml php7.4-ldap php7.4-imap|
     \item check fpm status: \verb|systemctl status php7.4-fpm|
     \item mariadb database: \verb|limesurvey| user+pw see password file
-    \item nginx howto: https://manual.limesurvey.org/General_FAQ#With_nginx_webserver
+    \item nginx howto: \url{https://manual.limesurvey.org/General_FAQ#With_nginx_webserver}
     \item config location: \verb|application/config/config.php|
+    \item changed \verb|/lib/systemd/system/phpsessionclean.timer| to only run at 1am, also see \verb|sudo systemctl status phpsessionclean.timer|
+    \item \verb|/etc/php/7.4/fpm/php.ini|: \verb|default_socket_timeout = 1200| and increased upload max size to 200 MB 
 \end{itemize}
 
 \paragraph{nginx config:} 
@@ -658,6 +660,11 @@ echo "folder size:"
 \verb|/etc/nginx/sites-available/default|
 
 \begin{verbatim}
+    # lime survey
+    location /survey/ {
+        try_files $uri /survey/index.php?$args;
+    }
+
     location ~ \.php$ {                                                                                                  
     fastcgi_split_path_info ^(.+\.php)(/.+)$;                                                                        
     fastcgi_pass unix:/var/run/php/php7.4-fpm.sock;                                                                  
