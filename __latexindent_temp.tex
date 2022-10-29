@@ -1,0 +1,682 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel} 
+\usepackage{graphicx}
+\usepackage{xurl}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{fancyvrb}
+
+\usepackage{parskip}
+\setlength{\parskip}{1pt} % 1ex plus 0.5ex minus 0.2ex}
+\setlength{\parindent}{0pt}
+
+% see https://www.overleaf.com/learn/latex/Code_listing
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    %numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\title{hroot documentation}
+\date{\today}
+
+\begin{document}
+
+\tableofcontents
+
+\maketitle
+
+\section{Contacts}
+Main admin and responsible for the Server is Tobias Weiss.
+
+Further server related contacts:
+\begin{itemize}
+    \item HRZ Hotline: 0641 99 13100 (Support time: working days 7:30-18:00)
+    \item Herr Marc Lang, Marc.Lang@hrz.uni-giessen.de (HRZ VMware responsible, Backup): 0641 / 99-13145
+    \item Herr Hartmut Weller, hartmut.weller@hrz.uni-giessen.de (HRZ): 0170 / 9107300
+\end{itemize}
+
+\section{Users}
+\begin{itemize}
+    \item penguin - HRZ admin user
+    \item tux - chair admin user, password is documented in keepass
+\end{itemize}
+
+\section{Initial setup}
+Inital setup took place on 30/04/2021.
+
+The Ticket ID for the IP-Form was 27051.
+
+\begin{lstlisting}
+Hostname:         experimente
+Domainname:       wirtschaft.uni-giessen.de
+
+IP-Adresse:       134.176.7.57
+Subnetzmaske:     255.255.255.0
+Standardgateway:  134.176.7.1
+
+Ethernetadresse:
+DNS-Server:       134.176.2.5
+DNS-Server:       134.176.2.7
+
+Verwaltungsdaten:
+Standort:         Heinrich-Buff-Ring 44
+Raum:             SR 2
+Hardware-Typ:     VIRTUAL-SERVER
+Software-Typ:     LINUX-UBUNTU
+\end{lstlisting}
+
+\section{Access}
+Access is granted to all chair members. Be aware of the chain of trust. Please consult the main in case of doubt.
+
+You can use the IP \verb|134.176.7.57:22| to connect via SSH.
+
+A \verb|~/.sshconfig| example:
+\begin{lstlisting}
+~/.sshconfig
+Host experimente.wirtschaft.uni-giessen.de                                        
+        User tux
+\end{lstlisting}
+
+\section{Software install log}
+Added software packages (name, date):
+\begin{itemize}
+    \item certbot, 2.2.22
+    \item libmariadb-deb, 2.2.22
+    \item mariadb-client, 2.2.22
+    \item mariadb-server, 2.2.22
+    \item nginx, 2.2.22
+    \item python3-certbot-nginx, 2.2.22
+    \item tmux, 2.2.22
+\end{itemize}
+
+Manually installed (package, source, date):
+\begin{itemize}
+    \item rvm, \url{http://rvm.io/}, 2.2.22
+\end{itemize}
+
+\section{docker}
+
+All commands were executed for following containers: \verb|haproxy|, \verb|watchtower|, |hroot-app| and |hroot-db|. For the sake of brevity only one command is listed in the following.
+
+\subsection{Disabled automatic restart for containers}
+
+\begin{lstlisting}
+sudo docker run -d --restart no haproxy
+\end{lstlisting}
+
+\subsection{Disabled docker service}
+
+\begin{lstlisting}
+sudo systemctl disable docker
+\end{lstlisting}
+
+\subsection{Old hroot Dockerfile}
+\begin{lstlisting}
+FROM phusion/passenger-full:2.1.0
+
+ENV HOME /root
+
+RUN lsb_release -a
+
+RUN rm -f /etc/service/nginx/down
+ADD ./webapp.conf /etc/nginx/sites-enabled/webapp.conf
+ADD ./hroot /home/app/hroot
+
+RUN apt update && apt -y upgrade && apt install shared-mime-info
+
+RUN bash -lc 'rvm install ruby-2.5.3'
+RUN bash -lc 'rvm --default use ruby-2.5.3'
+RUN bash -lc '/usr/bin/gem install bundler'
+RUN bash -lc '(cd /home/app/hroot/; /usr/bin/bundle update mimemagic)'
+RUN bash -lc '(cd /home/app/hroot/; /usr/bin/bundle install)'
+RUN bash -lc '(cd /home/app/hroot/; /usr/bin/bundle exec rails assets:precompile)'
+
+RUN bash -lc 'cp /usr/bin/ruby /usr/bin/ruby2.5.3'
+RUN bash -lc 'chmod -R 0777 /home/app/hroot/'
+
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+CMD ["/home/app/hroot/first_startup.sh"]
+\end{lstlisting}
+
+\section{System update to bullseye}
+
+Updated system to bullseye on 2.2.22.
+
+New \verb|/etc/apt/sources.list|:
+\begin{lstlisting}
+deb http://ftp2.de.debian.org/debian bullseye main non-free contrib
+deb-src http://ftp2.de.debian.org/debian bullseye main non-free contrib
+
+deb http://security.debian.org/debian-security bullseye-security main contrib non-free
+deb-src http://security.debian.org/debian-security bullseye-security main contrib non-free
+
+deb http://deb.debian.org/debian bullseye-updates main contrib non-free
+deb-src http://deb.debian.org/debian bullseye-updates main contrib non-free
+
+\end{lstlisting}
+
+\section{Unattended upgrades}
+
+The package was already installed.
+Run manually via \verb|sudo unattended-upgrade -d|
+
+See doc: \url{https://wiki.debian.org/UnattendedUpgrades}
+
+Changed \verb|/etc/apt/apt.conf.d/50unattended-upgrades|:
+\begin{lstlisting}
+Unattended-Upgrade::Mail "root";   
+\end{lstlisting}
+
+Added \verb|/etc/apt/apt.conf.d/20auto-upgrades|:
+\begin{lstlisting}
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+\end{lstlisting}
+
+\section{arno firewall}
+Reconfigure via \verb|dpkg-reconfigure -plow arno-iptables-firewall|
+
+Added open ports (separated by whitespace) \verb|22 80 443|
+
+\section{nginx}
+Config \verb|/etc/nginx/sites-available/default|
+\begin{lstlisting}
+    server {
+
+        # SSL configuration
+        #
+        # listen 443 ssl default_server;
+        # listen [::]:443 ssl default_server;
+        #
+        # Note: You should disable gzip for SSL traffic.
+        # See: https://bugs.debian.org/773332
+        #
+        # Read up on ssl_ciphers to ensure a secure configuration.
+        # See: https://bugs.debian.org/765782
+        #
+        # Self signed certs generated by the ssl-cert package
+        # Don't use them in a production server!
+        #
+        # include snippets/snakeoil.conf;
+
+        #root /var/www/html;
+        root /home/tux/hroot/public;
+
+        passenger_enabled on;
+        passenger_app_env production;
+
+        # Add index.php to the list if you are using PHP
+        index index.html index.htm index.nginx-debian.html;
+    server_name experimente.wirtschaft.uni-giessen.de; # managed by Certbot
+
+        location / {
+                # First attempt to serve request as file, then
+                # as directory, then fall back to displaying a 404.
+                try_files $uri $uri/ =404;
+        }
+
+        # pass PHP scripts to FastCGI server
+        #
+        #location ~ \.php$ {
+        #       include snippets/fastcgi-php.conf;
+        #
+        #       # With php-fpm (or other unix sockets):
+        #       fastcgi_pass unix:/run/php/php7.4-fpm.sock;
+        #       # With php-cgi (or other tcp sockets):
+        #       fastcgi_pass 127.0.0.1:9000;
+        #}
+
+        # deny access to .htaccess files, if Apache's document root
+        # concurs with nginx's one
+        #
+        #location ~ /\.ht {
+        #       deny all;
+        #}
+
+
+    listen [::]:443 ssl ipv6only=on; # managed by Certbot
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/experimente.wirtschaft.uni-giessen.de/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/experimente.wirtschaft.uni-giessen.de/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+}
+server {
+    if ($host = experimente.wirtschaft.uni-giessen.de) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+        listen 80 ;
+        listen [::]:80 ;
+    server_name experimente.wirtschaft.uni-giessen.de;
+    return 404; # managed by Certbot
+\end{lstlisting}
+
+Restart via \verb|sudo nginx -t && sudo nginx -s reload|
+
+\section{certbot}
+Documentation: \\
+\url{https://www.nginx.com/blog/using-free-ssltls-certificates-from-lets-encrypt-with-nginx/}
+
+Be aware the Debian package for nginx is called \verb|python3-certbot-nginx| (3 is missing in the guide)
+
+Generate certificates with the NGINX plug-in:
+\begin{verbatim}
+sudo certbot --nginx -d experimente.wirtschaft.uni-giessen.de
+\end{verbatim}
+
+Added crontab entry via \verb|sudo crontab -e| for renewal:
+\begin{lstlisting}
+# m h  dom mon dow   command
+0 5 * * * /usr/bin/certbot renew --quiet
+\end{lstlisting}
+
+\section{Postfix}
+Change \verb|/etc/postfix/canonical| for mail redirection.
+Do not forget to update the map after editing via \verb|sudo postmap /etc/postfix/canonical|.
+\begin{lstlisting}
+#root    linux-admins@hrz.uni-giessen.de
+root    tobias.weiss@wirtschaft.uni-giessen.de
+tux    tobias.weiss@wirtschaft.uni-giessen.de
+\end{lstlisting}
+
+
+\section{hroot}
+Source: \url{https://github.com/wiso-forschungslabor/hroot}
+
+Documentation: \url{https://github.com/wiso-forschungslabor/hroot-documentation/wiki/}
+
+\subsection{rails install}
+\begin{lstlisting}
+sudo gpg --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+curl -sSL https://get.rvm.io | sudo bash -s stable
+sudo usermod -a -G rvm tux
+source /etc/profile.d/rvm.sh
+rvm info
+rvm install 2.5.3
+rvm gemset create hroot
+rvm use 2.5.3@hroot
+ruby --version
+\end{lstlisting}
+
+\subsection{Mariadb install}
+\begin{lstlisting}
+sudo apt-get install mysql-server mysql-client libmariadb-dev
+sudo mysql_secure_installation
+\end{lstlisting}
+
+Note: Root PW was changed to something else than system login!
+
+After secure installation log into mysql via \verb|mysql -u root -p|.
+Create databases and hroot user:
+\begin{lstlisting}
+CREATE DATABASE hroot_development;
+CREATE DATABASE hroot_test;
+CREATE DATABASE hroot_production;
+CREATE USER 'hroot'@'localhost' IDENTIFIED BY 'password';
+GRANT ALL ON hroot_development.* TO 'hroot'@'localhost'; 
+GRANT ALL ON hroot_test.* TO 'hroot'@'localhost'; 
+GRANT ALL ON hroot_production.* TO 'hroot'@'localhost';
+FLUSH PRIVILEGES;
+\end{lstlisting}
+
+Deleted plain password in \verb|~/.mysql_history| afterwards.
+
+For further docs see \url{https://dev.mysql.com/doc/refman/8.0/en/grant.html}
+
+\subsection{hroot install}
+Forked hroot to GitHub account.
+To clone the git repo an access token is needed.
+Create one GitHub settings $\rightarrow$ Developer Settings $\rightarrow$ Personal access tokens
+\begin{lstlisting}
+cd /home/tux
+git clone https://github.com/JLU-BWL-XII/hroot.git
+\end{lstlisting}
+
+\begin{lstlisting}
+gem install bundler
+\end{lstlisting}
+
+Fix \verb|mimemagic| issue by editing the Gem file, add:
+\begin{lstlisting}
+    gem 'mimemagic', github: 'mimemagicrb/mimemagic', ref: '01f92d86d15d85cfd0f20dabd025dcbd36a8a60f'
+\end{lstlisting}
+Now change bundle to use HTTPS:
+\begin{lstlisting}
+bundle config hithub.https true
+\end{lstlisting}
+
+See \url{https://stackoverflow.com/questions/66919504/your-bundle-is-locked-to-mimemagic-0-3-5-but-that-version-could-not-be-found}
+
+Install gems:
+\begin{lstlisting}
+bundle install
+\end{lstlisting}
+
+Create databse config \verb|config/database.yml|:
+\begin{lstlisting}
+    development:
+    adapter: mysql2
+    encoding: utf8
+    reconnect: false
+    database: hroot_development
+    pool: 5
+    username: hroot
+    password: insert_your_database_password_here
+    host: localhost
+  
+  # Warning: The database defined as "test" will be erased and
+  # re-generated from your development database when you run "rake".
+  # Do not set this db to the same as development or production.
+  test:
+    adapter: mysql2
+    encoding: utf8
+    reconnect: false
+    database: hroot_test
+    pool: 5
+    username: hroot
+    password: insert_your_database_password_here
+    host: localhost
+  
+  production:
+    adapter: mysql2
+    encoding: utf8
+    reconnect: false
+    database: hroot_production
+    pool: 5
+    username: hroot
+    password: insert_your_database_password_here
+    host: localhost
+\end{lstlisting}
+
+Create \verb|secret_key_base| via \verb|EDITOR=vim rails credentials:edit|
+
+Create tables and admin user:
+\begin{lstlisting}
+rails db:migrate
+rails hroot:create_admin
+RAILS_ENV=production rails db:migrate
+RAILS_ENV=production rails hroot:create_admin
+\end{lstlisting}
+
+Create \verb|config/secrets.yml| and generate two keys via \verb|rails secret|.
+
+Run local server and tests:
+\begin{lstlisting}
+rails server
+rails db:test:prepare
+rails test
+\end{lstlisting}
+
+Application configs are in \verb|config/environments| (one per environment).
+
+\subsection{Passenger}
+Documentation: \url{https://www.phusionpassenger.com/docs/tutorials/deploy_to_production/installations/oss/ownserver/ruby/nginx/}
+
+\begin{lstlisting}
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 561F9B9CAC40B2F7
+sudo sh -c 'echo deb https://oss-binaries.phusionpassenger.com/apt/passenger bullseye main > /etc/apt/sources.list.d/passenger.list'
+sudo apt-get update
+if [ ! -f /etc/nginx/modules-enabled/50-mod-http-passenger.conf ]; then sudo ln -s /usr/share/nginx/modules-available/mod-http-passenger.load /etc/nginx/modules-enabled/50-mod-http-passenger.conf ; fi
+sudo ls /etc/nginx/conf.d/mod-http-passenger.conf
+sudo service nginx restart
+sudo /usr/bin/passenger-config validate-install
+sudo /usr/sbin/passenger-memory-stats
+\end{lstlisting}
+
+Precompile production assets:
+\begin{lstlisting}
+RAILS_ENV=production rails assets:precompile
+\end{lstlisting}
+
+\subsection{hroot cronjobs}
+Generate periodic tasks via \verb|whenever| and add them to \verb|crontab -e|:
+\begin{lstlisting}
+0,5,10,15,20,25,30,35,40,45,50,55 * * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''Task.run_tasks'\''' > /dev/null 2>&1
+
+0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''LoginCode.cleanup'\''' > /dev/null 2>&1
+
+0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''Task.send_warnings'\''' > /dev/null 2>&1
+
+0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''OneYearReminders.send_one_year_warnings1'\''' > /dev/null 2>&1
+
+0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''OneYearReminders.send_one_year_warnings2'\''' > /dev/null 2>&1
+
+0 0 * * * /bin/bash -l -c 'cd /home/tux/hroot && bundle exec bin/rails runner -e production '\''OneYearReminders.disable_after_one_year'\''' > /dev/null 2>&1
+\end{lstlisting}
+
+\subsection{Logo}
+Replaced JLU logo at \verb|app/assets/images/mainlogo.png|
+
+<<<<<<< HEAD
+Precompile production assets:
+\begin{lstlisting}
+RAILS_ENV=production rails assets:precompile
+\end{lstlisting}
+
+
+\subsection{Directions image}
+Placed image at \verb|public/assets/images/directions.png|
+=======
+\subsection{Footer}
+Now the privacy declaration is on one line with the rest.
+Edited footer in \verb|vi app/views/layouts/_footer.html.haml|.
+Removed \verb|%br| and added a pipe in line 7.
+
+To make sure that the changes take place:
+\begin{lstlisting}
+RAILS_ENV=production rails assets:precompile
+sudo systemctl restart nginx
+\end{lstlisting}
+
+\subsection{Custom Fields}
+Added custom fields (booleans) for off/online experiments:
+
+Alter \verb|config/environments/production.rb|:
+\begin{lstlisting}
+  # --------custom field definitions, see documentation for examples
+  # see https://github.com/wiso-forschungslabor/hroot-documentation/wiki/Custom-field-definitions
+
+  config.customfields = [
+      { type: :selection, name: :language, db_values: ["English", "French", "German"], translate: false, store_multiple: true },
+      { type: :bool, name: :online_experimets }, 
+      { type: :bool, name: :offline_experimets },
+      { type: :text, name: :study_field, required: false },
+]
+\end{lstlisting}
+
+Create DB entries via \verb|RAILS_ENV=production rake hroot:create_db_fields_for_custom_fields|.
+Restart nginx via \verb|sudo systemctl restart nginx|.
+>>>>>>> 957197b (add nim changes)
+
+\section{Monitoring}
+\subsection{Web server monitoring}
+Web server is externally monitored via a private host (tobias-weiss.org) by means a simple ping script.
+Ask Tobias Weiss for details.
+
+\subsection{Disk and memory monitoring}
+The simple \verb|home/tux/monitoring/disk-monitor.py| and \verb|memory-monitor.py| scripts are used.
+They alarm if disk is filled by more than 80\% or RAM less free than 200 MB.
+Note that the config resides in \verb|conf.py|.
+They are scheduled via \verb|/etc/crontab|:
+\begin{lstlisting}
+42 * * * * root free -m | python2.7 /home/tux/monitoring/memory-monitor.py
+42 * * * * root df -h | python2.7 /home/tux/monitoring/disk-monitor.py
+\end{lstlisting}
+
+\section{Backup}
+\subsection{System Backup}
+Storage policy:daily full (at 20:16), kept 60 days on disk and one year on tape.
+Herr Marc Lang creates a daily backup.
+
+\subsection{MySQL Backup}
+Stored in \verb|/home/tux/backup|
+
+Changed access rights to folder via \verb|chmod o-rx \verb|/home/tux/backup/|
+
+Storage policy: daily full, 30 days
+
+Daily database backup is scheduled via \verb|sudo crontab -e|:
+\begin{lstlisting}   
+24 3 * * * /usr/local/sbin/hroot-db-backup.sh 
+\end{lstlisting}
+
+The script is located at \verb|/usr/sbin/hroot-db-backup.sh|. Only root can read and execute.
+\begin{lstlisting}
+#!/bin/bash
+# backup script for the hroot production database
+# scheduled via
+# sudo crontab -e
+
+DB=hroot_production
+PATH=/home/tux/backup
+USER=hroot
+PASS=hrootDatabasePW
+DATE=`/usr/bin/date +%Y-%m-%d`
+
+echo "$DB database backup $DATE" 
+/usr/bin/mysqldump -u $USER -p$PASS $DB > $PATH/$DB-$DATE.sql
+echo "exit status: $?" 
+
+echo "Change access rights"
+/usr/bin/chmod o-rwx $PATH/*
+echo "exit status: $?"
+
+echo "deleting backups older than 30 days"
+/usr/bin/find /home/tux/backup -name "*.sql" -type f -mtime +30 -delete
+echo "exit status: $?" 
+
+echo "folder content:"
+/usr/bin/ls -lah $PATH
+
+echo "folder size:"
+/usr/bin/du -sh $PATH
+\end{lstlisting}
+
+\section{NIM Project Changes}
+
+\section{initial setup}
+
+\begin{itemize}
+    \item Installed \verb|postgresql| and \verb|prostgresql-contrib|,  see https://linuxize.com/post/how-to-install-postgresql-on-debian-10/
+    \item modified nginx config, see https://medium.com/analytics-vidhya/dajngo-with-nginx-gunicorn-aaf8431dc9e0
+    \item added gunicorn service, see \verb|/etc/systemd/system/NimBot.service|
+    \item added gunicorn service, see \verb|/etc/systemd/system/NimWeb.service|
+    \item added log rotate, see \verb|/etc/logrotate.d/NimBot|
+    \item added log rotate, see \verb|/etc/logrotate.d/NimWeb|
+    \item critical nginx parameter was \verb|proxy_ignore_client_abort on;|
+\end{itemize}
+
+\paragraph{nginx config:}
+
+\begin{verbatim}
+    #NIM                                                                                                                                                                                                                                                     
+    location /nim {                                                                                                                                                                                                                                           
+        try_files $uri @nim_app_server;                                                                                                                                                                                                                       
+    }                                                                                                                                                                                                                                                         
+    location @nim_app_server {                                                                                                                                                                                                                                
+        rewrite ^/nim/?(.*) /$1 break;                                                                                                                                                                                                                        
+        proxy_pass http://127.0.0.1:8000;                                                                                                                                                                                                                     
+        proxy_redirect http://127.0.0.1:8000/ /nim/;                                                                                                                                                                                                          
+        # proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;                                                                                                                                                                                        
+        # proxy_set_header X-Forwarded-Proto $scheme;                                                                                                                                                                                                         
+        # proxy_set_header Host $http_host;                                                                                                                                                                                                                   
+    }                                                                                                                                                                                                                                                         
+    location /bot {                                                                                                                                                                                                                                           
+        rewrite ^/bot/?(.*) /$1 break;                                                                                                                                                                                                                        
+        proxy_pass http://127.0.0.1:3978;                                                                                                                                                                                                                     
+        proxy_redirect http://127.0.0.1:3978 /bot/;                                                                                                                                                                                                           
+        #proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;                                                                                                                                                                                         
+        #proxy_set_header X-Forwarded-Proto $scheme;                                                                                                                                                                                                          
+        #proxy_set_header Host $http_host;                                                                                                                                                                                                                    
+        #proxy_http_version 1.1;                                                                                                                                                                                                                              
+        #proxy_read_timeout 7d;                                                                                                                                                                                                                               
+        #proxy_connect_timeout 7d;                                                                                                                                                                                                                            
+        #proxy_send_timeout 7d;                                                                                                                                                                                                                               
+        #send_timeout 7d;                                                                                                                                                                                                                                     
+        #keepalive_timeout 7d;                                                                                                                                                                                                                                
+        #proxy_buffering off;                                                                                                                                                                                                                                 
+        #proxy_request_buffering off;                                                                                                                                                                                                                         
+        #proxy_socket_keepalive on;                                                                                                                                                                                                                           
+        proxy_ignore_client_abort on;                                                                                                                                                                                                                         
+    }                                                                                                                                                                                                                                                         
+    location /nim/static/ {                                                                                                                                                                                                                                   
+        alias /home/tux/chatbot/web/static/;                                                                                                                                                                                                                  
+    }                                                                                                                                                                                                                                                         
+    location /nim/media/ {                                                                                                                                                                                                                                    
+        alias /home/tux/chatbot/web/main/media/;                                                                                                                                                                                                              
+    }    
+\end{verbatim}
+
+\section{disable actions after use}
+
+\begin{itemize}
+    \item \verb|systemctl stop prostgresql && systemctl disable postgresql|
+    \item \verb|systemctl stop NimBot && systemctl disable NimBot|
+    \item \verb|systemctl stop NimWeb && systemctl disable NimWeb|
+    \item removed nginx config
+\end{itemize}
+
+\section{Lime survey}
+\begin{itemize}
+    \item download: https://download.limesurvey.org/latest-stable-release/limesurvey5.4.8+221024.zip
+    \item install php: \verb|sudo apt install php7.4 php7.4-mbstring php7.4-mysql php7.4-gd php7.4-zip php7.4-fpm php7.4-json php7.4-xml php7.4-ldap php7.4-imap|
+    \item check fpm status: \verb|systemctl status php7.4-fpm|
+    \item mariadb database: \verb|limesurvey| user+pw see password file
+    \item nginx howto: \url{https://manual.limesurvey.org/General_FAQ#With_nginx_webserver}
+    \item config location: \verb|application/config/config.php|
+    \item changed \verb|/lib/systemd/system/phpsessionclean.timer| to only run at 1am, also see \verb|sudo systemctl status phpsessionclean.timer|
+    \item \verb|/etc/php/7.4/fpm/php.ini|: \verb|default_socket_timeout = 3600| and increased upload max size to 200 MB 
+\end{itemize}
+
+\paragraph{nginx config:} 
+
+\verb|/etc/nginx/sites-available/default|
+
+\begin{verbatim}
+    # lime survey
+    location /survey/ {
+        try_files $uri /survey/index.php?$args;
+    }
+
+    location ~ \.php$ {                                                                                                  
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;                                                                        
+        fastcgi_pass unix:/var/run/php/php7.4-fpm.sock;                                                                  
+        fastcgi_index index.php;                                                                                         
+        include fastcgi.conf;                                                                                            
+    }
+
+     # increase timeouts
+    proxy_read_timeout 3600;
+    proxy_connect_timeout 3600;
+    proxy_send_timeout 3600;
+}        
+\end{verbatim}
+
+\end{document}
