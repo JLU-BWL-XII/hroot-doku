@@ -653,6 +653,7 @@ echo "folder size:"
     \item config location: \verb|application/config/config.php|
     \item changed \verb|/lib/systemd/system/phpsessionclean.timer| to only run at 1am, also see \verb|sudo systemctl status phpsessionclean.timer|
     \item \verb|/etc/php/7.4/fpm/php.ini|: \verb|default_socket_timeout = 3600| and increased upload max size to 200 MB 
+    \item A backup is done analogous to hroot. The script is located at \verb|/usr/sbin/limesurvey-db-backup.sh|. It is scheduled via root's cron and only root can read and execute.
 \end{itemize}
 
 \paragraph{nginx config:} 
